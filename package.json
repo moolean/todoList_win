@@ -1,0 +1,39 @@
+{
+    "name": "todo-desktop-app",
+    "version": "1.0.0",
+    "description": "Lightweight desktop todo list app",
+    "main": "main.js",
+    "scripts": {
+      "start": "electron .",
+      "build": "electron-builder",
+      "dist": "electron-builder --publish=never"
+    },
+    "keywords": ["todo", "productivity", "desktop"],
+    "author": "Your Name",
+    "license": "MIT",
+    "devDependencies": {
+      "electron": "^27.0.0",
+      "electron-builder": "^24.6.4"
+    },
+    "build": {
+      "appId": "com.yourname.todoapp",
+      "productName": "Todo List",
+      "directories": {
+        "output": "dist"
+      },
+      "files": [
+        "main.js",
+        "preload.js",
+        "index.html",
+        "package.json"
+      ],
+      "win": {
+        "target": "nsis",
+        "icon": "icon.ico"
+      },
+      "nsis": {
+        "oneClick": false,
+        "allowToChangeInstallationDirectory": true
+      }
+    }
+  }
