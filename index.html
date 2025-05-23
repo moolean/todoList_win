@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo List</title>
+    <style>
+        :root {
+            --primary-hue: 240;
+            --bg-opacity: 0.1;
+            --blur-strength: 20px;
+            --corner-radius: 5px;
+            --spacing: 16px;
+            --animation-speed: 0.3s;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'SF Pro Display', sans-serif;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            background: transparent;
+            user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .app-container {
+            width: 330px;
+            max-height: 80vh;
+            background: rgba(30, 30, 40, 0.85);
+            backdrop-filter: blur(var(--blur-strength));
+            -webkit-backdrop-filter: blur(var(--blur-strength));
+            border-radius: var(--corner-radius);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.3),
+                0 8px 32px rgba(102, 126, 234, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            position: relative;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .app-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, 
+                transparent,
+                hsla(var(--primary-hue), 60%, 70%, 0.6),
+                transparent
+            );
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: move;
+            -webkit-app-region: drag;
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, 
+                transparent,
+                hsla(0, 0%, 100%, 0.2),
+                transparent
+            );
+            animation: shimmer 3s infinite;
+        }
+
+        .title {
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            text-shadow: 0 1px 2px hsla(0, 0%, 0%, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .title::before {
+            content: '✨';
+            font-size: 18px;
+            animation: sparkle 2s infinite alternate;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            -webkit-app-region: no-drag;
+        }
+
+        .control-btn {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            transition: all var(--animation-speed) cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .control-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: hsla(0, 0%, 100%, 0.3);
+            border-radius: 50%;
+            transition: all var(--animation-speed);
+            transform: translate(-50%, -50%);
+        }
+
+        .control-btn:hover::before {
+            width: 100%;
+            height: 100%;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .settings-btn { background: linear-gradient(135deg, #4CAF50, #45a049); }
+        .minimize { background: linear-gradient(135deg, #ffbd44, #ff9500); }
+        .close { background: linear-gradient(135deg, #ff605c, #ff3b30); }
+
+        .input-section {
+            padding: 20px;
+            border-bottom: 1px solid hsla(var(--primary-hue), 30%, 60%, 0.1);
+            background: hsla(var(--primary-hue), 10%, 95%, 0.02);
+        }
+
+        .todo-input {
+            width: 100%;
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 400;
+            outline: none;
+            transition: all var(--animation-speed) ease;
+        }
+
+        .todo-input:focus {
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .todo-input::placeholder {
+            color: hsla(0, 0%, 100%, 0.5);
+            font-weight: 300;
+        }
+
+        .todo-list {
+            max-height: 50vh;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 20px;
+            margin: 4px 12px;
+            border-radius: 10px;
+            transition: all var(--animation-speed) ease;
+            animation: slideIn 0.5s ease-out;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid transparent;
+        }
+
+        .todo-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(102, 126, 234, 0.2);
+            transform: translateX(4px);
+        }
+
+        .todo-item.completed {
+            opacity: 0.6;
+        }
+
+        .todo-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(102, 126, 234, 0.4);
+            border-radius: 6px;
+            margin-right: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--animation-speed) ease;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .todo-checkbox.checked {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-color: #667eea;
+        }
+
+        .todo-checkbox.checked::after {
+            content: '✓';
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            animation: checkmark 0.3s ease;
+        }
+
+        .todo-text {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.5;
+            word-wrap: break-word;
+            transition: all var(--animation-speed);
+            color: hsla(0, 0%, 100%, 0.9);
+            font-weight: 400;
+        }
+
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+            color: hsla(0, 0%, 100%, 0.5);
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: hsla(0, 0%, 100%, 0.4);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 18px;
+            opacity: 0;
+            transition: all var(--animation-speed);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .todo-item:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .delete-btn:hover {
+            background: hsla(0, 70%, 60%, 0.2);
+            color: #ff6b6b;
+            transform: scale(1.1);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: hsla(0, 0%, 100%, 0.4);
+            font-size: 14px;
+            font-weight: 300;
+        }
+
+        .stats {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 12px 20px;
+            background: hsla(var(--primary-hue), 10%, 0%, 0.3);
+            backdrop-filter: blur(10px);
+            font-size: 12px;
+            color: hsla(0, 0%, 100%, 0.7);
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid hsla(var(--primary-hue), 30%, 60%, 0.1);
+            border-radius: 0 0 var(--corner-radius) var(--corner-radius);
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            width: 280px;
+            background: hsla(var(--primary-hue), 15%, 10%, 0.9);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            border: 1px solid hsla(var(--primary-hue), 40%, 60%, 0.2);
+            box-shadow: 0 20px 40px hsla(0, 0%, 0%, 0.5);
+            padding: 20px;
+            transform: translateX(300px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 1000;
+        }
+
+        .settings-panel.open {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .settings-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .setting-group {
+            margin-bottom: 20px;
+        }
+
+        .setting-label {
+            display: block;
+            font-size: 12px;
+            color: hsla(0, 0%, 100%, 0.7);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .setting-input {
+            width: 100%;
+            padding: 8px 12px;
+            background: hsla(var(--primary-hue), 20%, 100%, 0.1);
+            border: 1px solid hsla(var(--primary-hue), 30%, 60%, 0.3);
+            border-radius: 8px;
+            color: white;
+            font-size: 12px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .setting-input:focus {
+            border-color: hsla(var(--primary-hue), 60%, 70%, 0.6);
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .color-option {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .color-option.active {
+            border-color: white;
+            transform: scale(1.1);
+        }
+
+        .color-option::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .color-option.active::after {
+            opacity: 1;
+        }
+
+        /* Custom scrollbar */
+        .todo-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .todo-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .todo-list::-webkit-scrollbar-thumb {
+            background: hsla(var(--primary-hue), 30%, 60%, 0.3);
+            border-radius: 3px;
+        }
+
+        .todo-list::-webkit-scrollbar-thumb:hover {
+            background: hsla(var(--primary-hue), 30%, 60%, 0.5);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes checkmark {
+            0% { transform: scale(0) rotate(45deg); }
+            50% { transform: scale(1.2) rotate(45deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        @keyframes sparkle {
+            0% { transform: scale(1) rotate(0deg); }
+            100% { transform: scale(1.1) rotate(5deg); }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: hsla(0, 0%, 100%, 0.5);
+            font-size: 14px;
+            font-weight: 300;
+        }
+
+        /* Theme presets */
+        .theme-blue { --primary-hue: 240; }
+        .theme-purple { --primary-hue: 280; }
+        .theme-pink { --primary-hue: 320; }
+        .theme-green { --primary-hue: 120; }
+        .theme-orange { --primary-hue: 30; }
+        .theme-red { --primary-hue: 0; }
+    </style>
+</head>
+<body>
+    <div class="app-container theme-blue" id="appContainer">
+        <div class="header" id="header">
+            <div class="title">Todo Dreams</div>
+            <div class="controls">
+                <button class="control-btn settings-btn" onclick="toggleSettings()"></button>
+                <button class="control-btn minimize" onclick="minimizeApp()"></button>
+                <button class="control-btn close" onclick="closeApp()"></button>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <input type="text" class="todo-input" id="todoInput" placeholder="What's on your mind today?" maxlength="100">
+        </div>
+
+        <div class="todo-list" id="todoList">
+            <div class="loading">Loading your dreams...</div>
+        </div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <span id="totalCount">0 dreams</span>
+            <span id="completedCount">0 achieved</span>
+        </div>
+    </div>
+
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-title">⚙️ Customize</div>
+        
+        <div class="setting-group">
+            <label class="setting-label">Theme Color</label>
+            <div class="color-picker">
+                <div class="color-option theme-blue active" style="background: linear-gradient(135deg, #667eea, #764ba2)" onclick="changeTheme('blue')"></div>
+                <div class="color-option theme-purple" style="background: linear-gradient(135deg, #a855f7, #ec4899)" onclick="changeTheme('purple')"></div>
+                <div class="color-option theme-pink" style="background: linear-gradient(135deg, #ec4899, #f97316)" onclick="changeTheme('pink')"></div>
+                <div class="color-option theme-green" style="background: linear-gradient(135deg, #10b981, #3b82f6)" onclick="changeTheme('green')"></div>
+                <div class="color-option theme-orange" style="background: linear-gradient(135deg, #f97316, #eab308)" onclick="changeTheme('orange')"></div>
+                <div class="color-option theme-red" style="background: linear-gradient(135deg, #ef4444, #ec4899)" onclick="changeTheme('red')"></div>
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <label class="setting-label">Transparency</label>
+            <input type="range" class="setting-input" id="opacitySlider" 
+                   min="0.05" max="0.3" step="0.05" value="0.1" 
+                   oninput="changeOpacity(this.value)">
+        </div>
+
+        <div class="setting-group">
+            <label class="setting-label">Blur Intensity</label>
+            <input type="range" class="setting-input" id="blurSlider" 
+                   min="10" max="40" step="5" value="20" 
+                   oninput="changeBlur(this.value)">
+        </div>
+
+        <div class="setting-group">
+            <label class="setting-label">Corner Roundness</label>
+            <input type="range" class="setting-input" id="radiusSlider" 
+                   min="8" max="32" step="4" value="24" 
+                   oninput="changeRadius(this.value)">
+        </div>
+    </div>
+
+    <script>
+        class TodoApp {
+            constructor() {
+                this.todos = [];
+                this.settings = this.loadSettings();
+                this.todoInput = document.getElementById('todoInput');
+                this.todoList = document.getElementById('todoList');
+                this.stats = document.getElementById('stats');
+                this.totalCount = document.getElementById('totalCount');
+                this.completedCount = document.getElementById('completedCount');
+                this.appContainer = document.getElementById('appContainer');
+                
+                this.init();
+            }
+
+            async init() {
+                this.applySettings();
+                await this.loadTodos();
+                
+                this.todoInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && this.todoInput.value.trim()) {
+                        this.addTodo(this.todoInput.value.trim());
+                        this.todoInput.value = '';
+                    }
+                });
+
+                this.renderTodos();
+                this.updateStats();
+                
+                setTimeout(() => this.todoInput.focus(), 200);
+            }
+
+            async addTodo(text) {
+                const todo = {
+                    id: Date.now(),
+                    text: text,
+                    completed: false,
+                    createdAt: new Date().toISOString()
+                };
+                
+                this.todos.unshift(todo);
+                await this.saveTodos();
+                this.renderTodos();
+                this.updateStats();
+            }
+
+            async toggleTodo(id) {
+                const todo = this.todos.find(t => t.id === id);
+                if (todo) {
+                    todo.completed = !todo.completed;
+                    await this.saveTodos();
+                    this.renderTodos();
+                    this.updateStats();
+                }
+            }
+
+            async deleteTodo(id) {
+                this.todos = this.todos.filter(t => t.id !== id);
+                await this.saveTodos();
+                this.renderTodos();
+                this.updateStats();
+            }
+
+            renderTodos() {
+                if (this.todos.length === 0) {
+                    this.todoList.innerHTML = '<div class="empty-state">No dreams yet. Share your first one! ✨</div>';
+                    return;
+                }
+
+                // Sort todos: unachieved first, then achieved
+                const sortedTodos = [...this.todos].sort((a, b) => {
+                    // If completion status is different, sort by completion (false first)
+                    if (a.completed !== b.completed) {
+                        return a.completed - b.completed;
+                    }
+                    // If completion status is same, maintain original order (by creation time, newest first)
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+                });
+
+                this.todoList.innerHTML = sortedTodos.map(todo => `
+                    <div class="todo-item ${todo.completed ? 'completed' : ''}">
+                        <div class="todo-checkbox ${todo.completed ? 'checked' : ''}" 
+                             onclick="app.toggleTodo(${todo.id})"></div>
+                        <div class="todo-text">${this.escapeHtml(todo.text)}</div>
+                        <button class="delete-btn" onclick="app.deleteTodo(${todo.id})">×</button>
+                    </div>
+                `).join('');
+            }
+
+            updateStats() {
+                const total = this.todos.length;
+                const completed = this.todos.filter(t => t.completed).length;
+                
+                if (total === 0) {
+                    this.stats.style.display = 'none';
+                } else {
+                    this.stats.style.display = 'flex';
+                    this.totalCount.textContent = `${total} dream${total !== 1 ? 's' : ''}`;
+                    this.completedCount.textContent = `${completed} achieved`;
+                }
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            applySettings() {
+                const root = document.documentElement;
+                root.style.setProperty('--primary-hue', this.settings.primaryHue);
+                root.style.setProperty('--bg-opacity', this.settings.bgOpacity);
+                root.style.setProperty('--blur-strength', this.settings.blurStrength + 'px');
+                root.style.setProperty('--corner-radius', this.settings.cornerRadius + 'px');
+                
+                this.appContainer.className = `app-container theme-${this.settings.theme}`;
+            }
+
+            loadSettings() {
+                try {
+                    const saved = JSON.parse(localStorage.getItem('todoSettings') || '{}');
+                    return {
+                        theme: saved.theme || 'blue',
+                        primaryHue: saved.primaryHue || 240,
+                        bgOpacity: saved.bgOpacity || 0.1,
+                        blurStrength: saved.blurStrength || 20,
+                        cornerRadius: saved.cornerRadius || 5,
+                        ...saved
+                    };
+                } catch {
+                    return {
+                        theme: 'blue',
+                        primaryHue: 240,
+                        bgOpacity: 0.1,
+                        blurStrength: 20,
+                        cornerRadius: 5
+                    };
+                }
+            }
+
+            saveSettings() {
+                localStorage.setItem('todoSettings', JSON.stringify(this.settings));
+            }
+
+            async loadTodos() {
+                try {
+                    if (window.electronAPI) {
+                        const result = await window.electronAPI.loadTodos();
+                        if (result.success) {
+                            this.todos = Array.isArray(result.data) ? result.data : [];
+                        } else {
+                            this.todos = [];
+                        }
+                    } else {
+                        const saved = JSON.parse(localStorage.getItem('todos') || '[]');
+                        this.todos = Array.isArray(saved) ? saved : [];
+                    }
+                } catch (e) {
+                    this.todos = [];
+                }
+            }
+
+            async saveTodos() {
+                try {
+                    if (window.electronAPI) {
+                        await window.electronAPI.saveTodos(this.todos);
+                    } else {
+                        localStorage.setItem('todos', JSON.stringify(this.todos));
+                    }
+                } catch (e) {
+                    console.error('Error saving todos:', e);
+                }
+            }
+        }
+
+        // Initialize app
+        const app = new TodoApp();
+
+        // Settings functions
+        function toggleSettings() {
+            const panel = document.getElementById('settingsPanel');
+            panel.classList.toggle('open');
+        }
+
+        function changeTheme(theme) {
+            const themeMap = {
+                blue: 240, purple: 280, pink: 320, 
+                green: 120, orange: 30, red: 0
+            };
+            
+            app.settings.theme = theme;
+            app.settings.primaryHue = themeMap[theme];
+            app.saveSettings();
+            app.applySettings();
+            
+            // Update active color
+            document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('active'));
+            document.querySelector(`.theme-${theme}`).classList.add('active');
+        }
+
+        function changeOpacity(value) {
+            app.settings.bgOpacity = parseFloat(value);
+            app.saveSettings();
+            app.applySettings();
+        }
+
+        function changeBlur(value) {
+            app.settings.blurStrength = parseInt(value);
+            app.saveSettings();
+            app.applySettings();
+        }
+
+        function changeRadius(value) {
+            app.settings.cornerRadius = parseInt(value);
+            app.saveSettings();
+            app.applySettings();
+        }
+
+        // Window controls
+        function minimizeApp() {
+            if (window.electronAPI) {
+                window.electronAPI.minimize();
+            }
+        }
+
+        function closeApp() {
+            if (window.electronAPI) {
+                window.electronAPI.close();
+            } else {
+                window.close();
+            }
+        }
+
+        // Dragging
+        let isDragging = false;
+        let initialX, initialY;
+
+        document.getElementById('header').addEventListener('mousedown', (e) => {
+            isDragging = true;
+            initialX = e.clientX;
+            initialY = e.clientY;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging && window.electronAPI) {
+                const deltaX = e.clientX - initialX;
+                const deltaY = e.clientY - initialY;
+                window.electronAPI.moveWindow(deltaX, deltaY);
+                initialX = e.clientX;
+                initialY = e.clientY;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Close settings when clicking outside
+        document.addEventListener('click', (e) => {
+            const panel = document.getElementById('settingsPanel');
+            const settingsBtn = document.querySelector('.settings-btn');
+            
+            if (!panel.contains(e.target) && e.target !== settingsBtn && panel.classList.contains('open')) {
+                panel.classList.remove('open');
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'n':
+                        e.preventDefault();
+                        app.todoInput.focus();
+                        break;
+                    case 'w':
+                        e.preventDefault();
+                        closeApp();
+                        break;
+                    case ',':
+                        e.preventDefault();
+                        toggleSettings();
+                        break;
+                }
+            }
+            
+            if (e.key === 'Escape') {
+                app.todoInput.blur();
+                document.getElementById('settingsPanel').classList.remove('open');
+            }
+        });
+    </script>
+</body>
+</html>
